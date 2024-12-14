@@ -1,38 +1,62 @@
 section .data
-filename db 'HelloWorld', 0   ;
-elf_message db 'ELF file detected', 0 
-type_message db 'ELF Type: ', 0 ;
+    filename db "HelloWorld", 0          ; Nom du fichier ELF à analyser
+    elf_message db 'ELF file detected', 0 
+    ;open_success_msg db "Ouvert", 0x0A
+    ;elf_header_msg db "Lu", 0x0A
+    ;lecture db "DAns un header de la boucle", 0x0A   
+    success_msg db "Yen a un", 0x0A ; Message de succès
+    failure db "Ya rien", 0x0A; Message d'échec
+    ;type db "Header type: ", 0
+    nbheaders db "Number of headers: ", 0
+    newline db "  ",0x0A, 0 
+    newline2 db 0x0A, 0 
+
+   
+
 
 section .bss
-buffer resb 64             
-type_buffer resb 16         
+    buffer resb 64         
+    programmheader resb 56        
+    type_buffer resb 16
+    bufferconv resb 16  
+  
 
 section .text
 global _start
 
 _start:
-    
-    xor rax, rax             
+    ; Ouvrir le fichier ELF
     mov rax, 2               
     lea rdi, [rel filename]  
-    xor rsi, rsi            
-    syscall                  
+    mov rsi, 0               
+    syscall
+    test rax, rax            
+    js _exit_with_error                  
+    mov r12, rax            
 
-    
-    test rax, rax
-    js _exit_with_error      
+    ; Afficher un message après l'ouverture réussie
+    ;mov rax, 1               ; syscall: write
+    ;mov rdi, 1               ; stdout
+    ;lea rsi, [rel open_success_msg]
+    ;mov rdx, 25              ; Longueur du message
+    ;syscall
 
-   
-    mov rdi, rax            
-
-    
-    xor rax, rax            
+    ; Lire l'en-tête ELF (Elf64_Ehdr)
     mov rax, 0               
-    lea rsi, [rel buffer]    
+    mov rdi, r12            
+    lea rsi, [rel buffer]     
     mov rdx, 64              
-    syscall                  
+    syscall
+    test rax, rax            
+    js _exit_with_error  
 
-  
+    ; Afficher un message après la lecture de l'en-tête ELF
+   ; mov rax, 1               ; syscall: write
+    ; mov rdi, 1               ; stdout
+   ; lea rsi, [rel elf_header_msg]
+    ;mov rdx, 28              ; Longueur du message
+    ;syscall
+
     lea rbx, [rel buffer]    
     mov al, byte [rbx]      
     cmp al, 0x7f            
@@ -57,8 +81,16 @@ _start:
     mov rdi, 1              
     lea rsi, [rel elf_message] 
     mov rdx, 18              
-    syscall                  
+    syscall       
 
+     ; Afficher saut de ligne
+    mov rax, 1         
+    mov rdi, 1         
+    lea rsi, [rel newline2] 
+    mov rdx, 1         
+    syscall
+
+    ;;lis le type
     lea rbx, [rel buffer]    
     mov ax, word [rbx+16]    
     
@@ -70,19 +102,149 @@ _start:
     mov rdi, 1               
     lea rsi, [rel type_buffer] 
     mov rdx, 16              
-    syscall                  
+    syscall      
 
+     ; Afficher saut de ligne
+    mov rax, 1          
+    mov rdi, 1          
+    lea rsi, [rel newline2] 
+    mov rdx, 1          
+    syscall
+
+
+
+    ; Afficher le nombre d'en-têtes de programme 
+    mov rcx, [buffer + 56]     
+    lea rsi, [rel bufferconv] 
+    mov rdi, rcx             
+    call num_to_str          
+
+    mov rax, 1               
+    mov rdi, 1               
+    lea rsi, [rel nbheaders]
+    mov rdx, 20              
+    syscall
+
+      ; Afficher le retour à la ligne
+    ;mov rax, 1          
+    ;mov rdi, 1         
+    ;lea rsi, [rel newline] 
+    ;mov rdx, 1          
+    ;syscall
+
+    mov rax, 1             
+    mov rdi, 1               
+    lea rsi, [rel bufferconv]
+    mov rdx, 16              
+    syscall
+
+     ; Afficher le retour à la ligne
+    mov rax, 1          
+    mov rdi, 1        
+    lea rsi, [rel newline2] 
+    mov rdx, 1         
+    syscall
+    
+
+    ; Obtenir les informations des en-têtes de programme
+    mov rbx, [buffer+ 32]    
+    mov rcx, [buffer + 56]     
+    mov rdx, [buffer + 54]     
+
+
+
+;itère pour chaque programme header et check son type si ptnote alors renvoi vers ptnote
+boucle:
+    test rcx, rcx            
+    jz pasdeptnote      
+
+    ; Afficher un message pour chaque en-tête détecté
+    ;mov rax, 1               
+   ; mov rdi, 1               
+   ; lea rsi, [rel lecture]
+    ;mov rdx, 23              
+    ;syscall
+
+    ; Lire l'en-tête de programme actuel
+    mov rax, 0              
+    mov rdi, r12           
+    lea rsi, [rel programmheader]     
+    mov r10, rbx            
+    mov rdx, 56              
+    syscall
+    test rax, rax            
+    js _exit_with_error  
+
+ 
+   ; mov rax, 1          
+    ;mov rdi, 1          
+    ;lea rsi, [rel type] 
+   ; mov rdx, 1          
+    ;syscall
+
+    ; Afficher le type brut de l'en-tête
+    mov eax, dword [programmheader]    
+    mov edi, eax            
+    lea rsi, [rel bufferconv]
+    call num_to_str         
+
+    mov rax, 1               
+    mov rdi, 1              
+    lea rsi, [rel bufferconv]
+    mov rdx, 16              
+    syscall
+
+      ; Afficher le retour à la ligne
+    mov rax, 1          
+    mov rdi, 1        
+    lea rsi, [rel newline] 
+    mov rdx, 1          
+    syscall
+
+    ; Afficher le retour à la ligne
+    mov rax, 1         
+    mov rdi, 1        
+    lea rsi, [rel newline2] 
+    mov rdx, 1         
+    syscall
+
+    ; Vérifier si le type est PT_NOTE
+    cmp dword [programmheader], 4      
+    je ptnote         
+
+    add rbx, rdx            
+    dec rcx                 
+    jmp boucle
+
+;Ptnote trouvé
+ptnote:
+   
+    mov rax, 1               
+    mov rdi, 1               
+    lea rsi, [rel success_msg]
+    mov rdx, 14             
+    syscall
+    jmp close_file
+
+;ptnote pas trouvée
+pasdeptnote:
+    ; Afficher un message d'échec
+    mov rax, 1               
+    mov rdi, 1              
+    lea rsi, [rel failure]
+    mov rdx, 18              
+    syscall
+    jmp close_file
+
+
+close_file:
+    ; Fermer le fichier
     mov rax, 3               
-    syscall                  
+    mov rdi, r12             
+    syscall
 
-    xor rdi, rdi             
-    mov rax, 60              
-    syscall                 
 
-_exit_with_error:
-    mov rax, 60              
-    xor rdi, rdi             
-    syscall                  
+
 
 num_to_str: 
     mov rbx, 10              
@@ -99,86 +261,7 @@ num_to_str:
     ret
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+_exit_with_error:
+    mov rax, 60              
+    xor rdi, rdi             
+    syscall    
