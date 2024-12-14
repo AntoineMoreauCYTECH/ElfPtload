@@ -10,6 +10,8 @@ section .data
     nbheaders db "Number of headers: ", 0
     newline db "  ",0x0A, 0 
     newline2 db 0x0A, 0 
+    success_msg2 db "PT_NOTE modifié en PT_LOAD", 0
+    
 
    
 
@@ -28,7 +30,7 @@ _start:
     ; Ouvrir le fichier ELF
     mov rax, 2               
     lea rdi, [rel filename]  
-    mov rsi, 0               
+    mov rsi, 2              
     syscall
     test rax, rax            
     js _exit_with_error                  
@@ -218,13 +220,27 @@ boucle:
 
 ;Ptnote trouvé
 ptnote:
+ ; Modifier ptnote en ptload
+   mov dword [programmheader], 1   
+
    
-    mov rax, 1               
-    mov rdi, 1               
-    lea rsi, [rel success_msg]
-    mov rdx, 14             
-    syscall
-    jmp close_file
+   mov rax, 1
+   mov rdi, 1               ; stdout
+   lea rsi, [rel success_msg2]
+   mov rdx, 14              ; Longueur du message
+   syscall
+
+   
+   mov rax, 1               ; syscall: write
+   mov rdi, r12             ; Descripteur de fichier
+   lea rsi, [rel programmheader]  ; Adresse du buffer modifié
+   mov rdx, 56              ; Taille de Elf64_Phdr
+   syscall
+
+   
+   jmp close_file
+
+
 
 ;ptnote pas trouvée
 pasdeptnote:
