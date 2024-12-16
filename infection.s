@@ -11,6 +11,9 @@ section .data
     newline db "  ",0x0A, 0 
     newline2 db 0x0A, 0 
     success_msg2 db "PT_NOTE modifié en PT_LOAD", 0
+    crise db "Crise",0x0A, 0
+    test1 db "HEHEHEHEHEHEHE ",0x0A, 0
+    
     
 
    
@@ -27,7 +30,7 @@ section .text
 global _start
 
 _start:
-    ; Ouvrir le fichier ELF
+    
     mov rax, 2               
     lea rdi, [rel filename]  
     mov rsi, 2              
@@ -37,13 +40,13 @@ _start:
     mov r12, rax            
 
     ; Afficher un message après l'ouverture réussie
-    ;mov rax, 1               ; syscall: write
-    ;mov rdi, 1               ; stdout
+    ;mov rax, 1               
+    ;mov rdi, 1              
     ;lea rsi, [rel open_success_msg]
-    ;mov rdx, 25              ; Longueur du message
+    ;mov rdx, 25              
     ;syscall
 
-    ; Lire l'en-tête ELF (Elf64_Ehdr)
+   
     mov rax, 0               
     mov rdi, r12            
     lea rsi, [rel buffer]     
@@ -115,7 +118,6 @@ _start:
 
 
 
-    ; Afficher le nombre d'en-têtes de programme 
     mov rcx, [buffer + 56]     
     lea rsi, [rel bufferconv] 
     mov rdi, rcx             
@@ -148,17 +150,18 @@ _start:
     syscall
     
 
-    ; Obtenir les informations des en-têtes de programme
+  
     mov rbx, [buffer+ 32]    
     mov rcx, [buffer + 56]     
-    mov rdx, [buffer + 54]     
+    mov rdx, [buffer + 54]  
+    mov r13, rbx   
 
 
 
 ;itère pour chaque programme header et check son type si ptnote alors renvoi vers ptnote
 boucle:
     test rcx, rcx            
-    jz pasdeptnote      
+    ;jz pasdeptnote      
 
     ; Afficher un message pour chaque en-tête détecté
     ;mov rax, 1               
@@ -167,7 +170,7 @@ boucle:
     ;mov rdx, 23              
     ;syscall
 
-    ; Lire l'en-tête de programme actuel
+
     mov rax, 0              
     mov rdi, r12           
     lea rsi, [rel programmheader]     
@@ -211,46 +214,82 @@ boucle:
     syscall
 
     ; Vérifier si le type est PT_NOTE
-    cmp dword [programmheader], 4      
+    cmp dword [programmheader], 4   
+   
     je ptnote         
 
-    add rbx, rdx            
+    add rbx, rdx 
+    add r13, 56           
     dec rcx                 
     jmp boucle
 
-;Ptnote trouvé
+
 ptnote:
- ; Modifier ptnote en ptload
-   mov dword [programmheader], 1   
+    
 
-   
-   mov rax, 1
-   mov rdi, 1               ; stdout
-   lea rsi, [rel success_msg2]
-   mov rdx, 14              ; Longueur du message
-   syscall
+    ; Afficher le retour à la ligne
+    mov rax, 1         
+    mov rdi, 1        
+    lea rsi, [rel test1] 
+    mov rdx, 1         
+    syscall
 
-   
-   mov rax, 1               ; syscall: write
-   mov rdi, r12             ; Descripteur de fichier
-   lea rsi, [rel programmheader]  ; Adresse du buffer modifié
-   mov rdx, 56              ; Taille de Elf64_Phdr
-   syscall
+    ; Afficher le retour à la ligne
+    mov rax, 1         
+    mov rdi, 1        
+    lea rsi, [rel newline2] 
+    mov rdx, 1         
+    syscall
 
-   
-   jmp close_file
+     ; Afficher le retour à la ligne
+    mov rax, 1         
+    mov rdi, 1        
+    lea rsi, [rel crise] 
+    mov rdx, 1         
+    syscall
+
+
+    
+    mov dword [programmheader], 1   
+
+    mov rax, 8        
+    mov rdi, r12      
+    mov rsi, r13     
+    mov rdx, 0       
+    syscall
+    test rax, rax
+    js _exit_with_error
+
+    
+    mov rax, 1              
+    mov rdi, r12            
+    lea rsi, [rel programmheader]  
+    mov rdx, 56              
+    syscall
+    test rax, rax
+    js _exit_with_error
+
+  
+    mov rax, 1
+    mov rdi, 1               
+    lea rsi, [rel success_msg]
+    mov rdx, 14              
+    syscall
+    jmp close_file
+
+
 
 
 
 ;ptnote pas trouvée
-pasdeptnote:
+;pasdeptnote:
     ; Afficher un message d'échec
-    mov rax, 1               
-    mov rdi, 1              
-    lea rsi, [rel failure]
-    mov rdx, 18              
-    syscall
-    jmp close_file
+   ; mov rax, 1               
+   ; mov rdi, 1              
+   ; lea rsi, [rel failure]
+   ; mov rdx, 18              
+   ; syscall
+    ;jmp close_file
 
 
 close_file:
